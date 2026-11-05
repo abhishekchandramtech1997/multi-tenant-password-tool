@@ -16,7 +16,7 @@ This repository ensures that database passwords are stored securely using Larave
   - [1. Password Tool API](#1-password-tool-api-utility)
   - [2. Master Dynamic Password Update API](#2-master-dynamic-password-update-api)
   - [3. Test Database Connection API](#3-test-database-connection-api)
-- [🔒 Security Highlights](#-security-highlights)
+- 
 
 ---
 
