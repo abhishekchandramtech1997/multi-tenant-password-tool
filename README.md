@@ -16,6 +16,7 @@ This repository ensures that database passwords are stored securely using Larave
   - [1. Password Tool API](#1-password-tool-api-utility)
   - [2. Master Dynamic Password Update API](#2-master-dynamic-password-update-api)
   - [3. Test Database Connection API](#3-test-database-connection-api)
+- [🔒 TenantDatabaseService Configuration](#-tenantdatabaseservice-configuration)
 
 ---
 
@@ -97,9 +98,9 @@ Test the APIs in the sequential order outlined below to verify encryption, serve
 
 ### 1. Password Tool API (Utility)
 
-* **Method:** `POST`
-* **Endpoint:** `http://127.0.0.1:8000/api/password-tool`
-* **Content-Type:** `application/json`
+- **Method:** `POST`
+- **Endpoint:** `http://127.0.0.1:8000/api/password-tool`
+- **Content-Type:** `application/json`
 
 #### Request Body
 ```json
@@ -120,9 +121,9 @@ Test the APIs in the sequential order outlined below to verify encryption, serve
 ### 2. Master Dynamic Password Update API
 Synchronizes password updates across both the MySQL Server (`ALTER USER`) and the tenant's `deployment` database record simultaneously.
 
-* **Method:** `POST`
-* **Endpoint:** `http://127.0.0.1:8000/api/update-tenant-password`
-* **Content-Type:** `application/json`
+- **Method:** `POST`
+- **Endpoint:** `http://127.0.0.1:8000/api/update-tenant-password`
+- **Content-Type:** `application/json`
 
 #### Request Body
 ```json
@@ -143,8 +144,8 @@ Synchronizes password updates across both the MySQL Server (`ALTER USER`) and th
 ### 3. Test Database Connection API
 Fetches tenant details from `deployment`, decrypts the database password on-the-fly, establishes a dynamic connection to the tenant database, and verifies data accessibility.
 
-* **Method:** `GET`
-* **Endpoint:** `http://127.0.0.1:8000/api/test-db-connection`
+- **Method:** `GET`
+- **Endpoint:** `http://127.0.0.1:8000/api/test-db-connection`
 
 #### Query Parameters
 | Parameter | Type | Required | Value Example |
@@ -158,3 +159,47 @@ GET http://127.0.0.1:8000/api/test-db-connection?app_name=workintel
 
 ---
 
+## 🔒 TenantDatabaseService Configuration
+
+To handle encrypted passwords securely at runtime, update your service file located at **`workintel-ai/backend/app/Services/TenantDatabaseService.php`**. 
+
+1. Ensure the `Crypt` facade is imported at the top of the file:
+   ```php
+   use Illuminate\Support\Facades\Crypt;
+   ```
+
+2. Inside your `connectionConfig` function, update the password configuration to decrypt the stored encrypted string on the fly:
+   ```php
+   protected function connectionConfig(TenantDeployment $deployment): array
+   {
+       $base = config('database.connections.shared');
+
+       $options = [];
+       if ($deployment->db_ssl_enabled && $deployment->db_ssl_cert_path) {
+           $options[\PDO::MYSQL_ATTR_SSL_CA] = $deployment->db_ssl_cert_path;
+       }
+
+       return [
+           'driver' => $base['driver'] ?? 'mysql',
+           'host' => $deployment->db_app_host ?: ($base['host'] ?? env('DB_HOST', '127.0.0.1')),
+           'port' => $deployment->db_app_port ?: ($base['port'] ?? '3306'),
+           'database' => $deployment->db_app_name,
+           'username' => $deployment->db_app_user ?: ($base['username'] ?? 'root'),
+           // Old password line commented out:
+          // 'password' => $deployment->db_app_password_enc ?: ($base['password'] ?? ''),
+           // Decrypting the database password at runtime
+           'password' => $deployment->db_app_password_enc 
+               ? Crypt::decryptString($deployment->db_app_password_enc) 
+               : ($base['password'] ?? ''),
+
+           'unix_socket' => $base['unix_socket'] ?? '',
+           'charset' => $base['charset'] ?? 'utf8mb4',
+           'collation' => $base['collation'] ?? 'utf8mb4_unicode_ci',
+           'prefix' => '',
+           'prefix_indexes' => true,
+           'strict' => true,
+           'engine' => null,
+           'options' => extension_loaded('pdo_mysql') ? $options : [],
+       ];
+   }
+   ```

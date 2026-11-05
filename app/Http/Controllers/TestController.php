@@ -135,7 +135,7 @@ class TestController extends Controller
 
             
             DB::purge('dynamic_tenant');
-            DB::reconnect('dynamic_tenant');
+              DB::reconnect('dynamic_tenant');
 
             $sampleData = DB::connection('dynamic_tenant')->table('users')->limit(5)->get();
 
