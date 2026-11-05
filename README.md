@@ -1,41 +1,81 @@
-Multi-Tenant Secure Database Password Management & Testing System
-This repository provides a clean, secure implementation of encrypted database password management and dynamic connection testing for a multi-tenant Laravel application. It ensures passwords are securely stored as encrypted strings in the database while maintaining automated MySQL user synchronization and seamless runtime connections.
+# 🛡️ Multi-Tenant Secure Database Password Tool
 
-📋 System Requirements & Prerequisites
-Before setting up and testing the APIs, ensure your local environment has the following installed:
+A clean, robust, and secure implementation for encrypted database password management and dynamic connection testing in multi-tenant **Laravel** applications. 
 
-PHP (v8.2 or higher)
+This repository ensures that database passwords are stored securely using Laravel's native encryption, automatically synchronized with MySQL users, and dynamically connected at runtime.
 
-Composer
+---
 
-MySQL / MariaDB (via XAMPP, WAMP, or standalone)
+## 📑 Table of Contents
 
-Postman (for API testing)
+- [✨ Features](#-features)
+- [💻 System Requirements](#-system-requirements)
+- [⚙️ Environment Setup](#️-environment-setup)
+- [🗄️ Database Setup](#️-database-setup)
+- [🚀 API Endpoints & Workflow](#-api-endpoints--workflow)
+  - [1. Password Tool API](#1-password-tool-api-utility)
+  - [2. Master Dynamic Password Update API](#2-master-dynamic-password-update-api)
+  - [3. Test Database Connection API](#3-test-database-connection-api)
+- [🔒 Security Highlights](#-security-highlights)
 
-⚙️ Installation & Environment Setup
-Clone or Open the Project in your terminal or editor (e.g., VS Code).
+---
 
-Install PHP dependencies:
+## ✨ Features
 
-Bash
+- 🔐 **At-Rest Encryption:** Tenant passwords are never stored in plain text.
+- 🔄 **Automated MySQL Sync:** Executes `ALTER USER` commands directly on the MySQL server upon password changes.
+- ⚡ **Dynamic Runtime Connections:** Decrypts database credentials on-the-fly to connect to tenant databases without altering `.env` files.
+- 🛠️ **Utility API:** Included tool for instant encryption/decryption testing.
+
+---
+
+## 💻 System Requirements
+
+| Tool / Dependency | Recommended Version | Note |
+| :--- | :--- | :--- |
+| **PHP** | `^8.2` or higher | Core runtime environment |
+| **Composer** | `^2.0` | Dependency Manager |
+| **Database** | MySQL / MariaDB | XAMPP, WAMP, or Standalone |
+| **API Client** | Postman / Insomnia | For testing API endpoints |
+
+---
+
+## ⚙️ Environment Setup
+
+Follow these steps to get your local environment running:
+
+### Step 1: Clone & Install
+```bash
+# Clone the repository (or open your local copy)
+git clone <your-repository-url>
+cd <repository-folder>
+
+# Install composer dependencies
 composer install
-Configure Environment File:
-Copy .env.example to .env and generate your application encryption key (vital for Laravel's Crypt mechanism):
+```
 
-Bash
+### Step 2: Configure Environment
+Copy the `.env.example` file to create your local `.env` configuration, then generate a unique application key (essential for Laravel's `Crypt` facade):
+
+```bash
 cp .env.example .env
 php artisan key:generate
-Start the Local Development Server:
+```
 
-Bash
+### Step 3: Run Development Server
+```bash
 php artisan serve
-(The server will run locally at [http://127.0.0.1:8000](http://127.0.0.1:8000))
+```
+> 📍 **Local Server Base URL:** `http://127.0.0.1:8000`
 
-🗄️ Database Setup: Deployment Table & Dummy Record
-Run the following SQL queries in your main database (via phpMyAdmin or MySQL console) to create the deployment table and insert a dummy tenant record:
+---
 
-SQL
--- 1. Create the deployment table
+## 🗄️ Database Setup
+
+Run the following SQL queries in your main database management tool (phpMyAdmin, DBeaver, or MySQL Console):
+
+### 1. Create `deployment` Table
+```sql
 CREATE TABLE `deployment` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `app_name` VARCHAR(100) NOT NULL,
@@ -43,62 +83,88 @@ CREATE TABLE `deployment` (
   `db_port` INT(11) NOT NULL DEFAULT 3306,
   `db_database` VARCHAR(100) NOT NULL,
   `db_username` VARCHAR(100) NOT NULL,
-  `db_password` TEXT NOT NULL, -- Stores Laravel encrypted string
+  `db_password` TEXT NOT NULL, -- Stores encrypted string via Laravel Crypt
   `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
 
--- 2. Insert a dummy tenant record (Ensure the database 'workintel' and user 'workintel' exist in MySQL)
+### 2. Insert Initial Tenant Record
+> ⚠️ **Prerequisite:** Make sure the database `workintel` and user `workintel` already exist in your MySQL server.
+
+```sql
 INSERT INTO `deployment` (`app_name`, `db_host`, `db_port`, `db_database`, `db_username`, `db_password`) 
 VALUES ('workintel', '127.0.0.1', 3306, 'workintel', 'workintel', 'dummy_encrypted_string');
+```
 
-🚀 The 3 Core APIs: End-to-End Workflow
-Test the APIs in the following order to verify encryption, server synchronization, and connection handling:
+---
 
-1. Password Tool API (Encryption / Decryption Utility)
-Purpose: Manually test Laravel's Crypt encryption and decryption functions for any string.
+## 🚀 API Endpoints & Workflow
 
-HTTP Method: POST
+Test the APIs in the sequential order outlined below to verify encryption, server synchronization, and runtime connection handling.
 
-Endpoint URL: [http://127.0.0.1:8000/api/password-tool](http://127.0.0.1:8000/api/password-tool)
+---
 
-Parameters (JSON Body):
+### 1. Password Tool API (Utility)
 
-JSON
+* **Method:** `POST`
+* **Endpoint:** `http://127.0.0.1:8000/api/password-tool`
+* **Content-Type:** `application/json`
+
+#### Request Body
+```json
 {
     "string": "secret123",
     "option": 1
 }
-string: The plain text or encrypted string you want to convert.
+```
 
-option: 1 to Encrypt (plain text ➔ encrypted string), 2 to Decrypt (encrypted string ➔ plain text).
+#### Parameter Details
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `string` | `string` | Plaintext string to encrypt **OR** encrypted string to decrypt |
+| `option` | `integer` | `1` = Encrypt (Plaintext ➔ Encrypted) <br> `2` = Decrypt (Encrypted ➔ Plaintext) |
 
-2. Master Dynamic Password Update API
-Purpose: Automatically updates the MySQL server user password (ALTER USER) and securely saves the newly encrypted password in the deployment table simultaneously.
+---
 
-HTTP Method: POST
+### 2. Master Dynamic Password Update API
+Synchronizes password updates across both the MySQL Server (`ALTER USER`) and the tenant's `deployment` database record simultaneously.
 
-Endpoint URL: [http://127.0.0.1:8000/api/update-tenant-password](http://127.0.0.1:8000/api/update-tenant-password)
+* **Method:** `POST`
+* **Endpoint:** `http://127.0.0.1:8000/api/update-tenant-password`
+* **Content-Type:** `application/json`
 
-Parameters (JSON Body):
-
-JSON
+#### Request Body
+```json
 {
     "app_name": "workintel",
     "new_password": "secret123"
 }
-app_name: The unique tenant identifier matching the table record ("workintel").
+```
 
-new_password: The new plain text password you want to assign.
+#### Parameter Details
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `app_name` | `string` | Unique tenant identifier matching the `deployment` table |
+| `new_password` | `string` | New plain text password to assign to the MySQL user |
 
-3. Test Database Connection API
-Purpose: Reads the encrypted password string from the deployment table, decrypts it on the fly at runtime using Crypt::decryptString(), connects to MySQL, and fetches sample data.
+---
 
-HTTP Method: GET
+### 3. Test Database Connection API
+Fetches tenant details from `deployment`, decrypts the database password on-the-fly, establishes a dynamic connection to the tenant database, and verifies data accessibility.
 
-Endpoint URL: [http://127.0.0.1:8000/api/test-db-connection?app_name=workintel](http://127.0.0.1:8000/api/test-db-connection?app_name=workintel)
+* **Method:** `GET`
+* **Endpoint:** `http://127.0.0.1:8000/api/test-db-connection`
 
-Parameters (Query Parameters / URL Params):
+#### Query Parameters
+| Parameter | Type | Required | Value Example |
+| :--- | :--- | :--- | :--- |
+| `app_name` | `string` | **Yes** | `workintel` |
 
-app_name: workintel (Passed directly in the URL query string).
+#### Complete Request URL Example
+```http
+GET http://127.0.0.1:8000/api/test-db-connection?app_name=workintel
+```
+
+---
 
