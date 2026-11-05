@@ -16,16 +16,6 @@ This repository ensures that database passwords are stored securely using Larave
   - [1. Password Tool API](#1-password-tool-api-utility)
   - [2. Master Dynamic Password Update API](#2-master-dynamic-password-update-api)
   - [3. Test Database Connection API](#3-test-database-connection-api)
-- 
-
----
-
-## ✨ Features
-
-- 🔐 **At-Rest Encryption:** Tenant passwords are never stored in plain text.
-- 🔄 **Automated MySQL Sync:** Executes `ALTER USER` commands directly on the MySQL server upon password changes.
-- ⚡ **Dynamic Runtime Connections:** Decrypts database credentials on-the-fly to connect to tenant databases without altering `.env` files.
-- 🛠️ **Utility API:** Included tool for instant encryption/decryption testing.
 
 ---
 

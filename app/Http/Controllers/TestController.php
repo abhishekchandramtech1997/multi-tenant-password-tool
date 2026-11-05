@@ -144,6 +144,7 @@ class TestController extends Controller
                 'message'            => 'Database connected successfully using encrypted password!',
                 'connected_database' => $deployment->db_database,
                 'db_user'            => $deployment->db_username,
+                'db_password'        => $decryptedPassword,
                 'users_table_data'  => $sampleData
             ]);
 
